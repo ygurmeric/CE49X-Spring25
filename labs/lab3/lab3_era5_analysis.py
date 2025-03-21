@@ -1,203 +1,65 @@
-#!/usr/bin/env python3
-# coding: utf-8
-
-"""
-Lab 3: ERA5 Weather Data Analysis
----------------------------------
-Analyzes ERA5 wind data for Berlin and Munich with a 'timestamp' column.
-Generates monthly, seasonal, and diurnal statistics and visualizations.
-
-Usage:
-    python lab3_era5_analysis.py
-
-Notes:
-    - Expects CSV files with columns:
-      ['timestamp', 'u10m', 'v10m', ...]
-    - 'timestamp' must be in "YYYY-MM-DD HH:MM:SS" format.
-    - Plots will display in a pop-up window unless you're in a headless environment.
-      If so, either remove plt.show() calls or save figures programmatically.
-"""
-
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 
-# -------------------------------------------------------------------------
-# 1. LOAD ERA5 DATA WITH "timestamp" COLUMN
-# -------------------------------------------------------------------------
-def load_era5_data(file_path: str) -> pd.DataFrame:
-    """
-    Loads ERA5 data from the specified CSV file.
-    Assumes the file has a 'timestamp' column in "YYYY-MM-DD HH:MM:SS" format.
-    Sets 'timestamp' as DatetimeIndex.
-    """
-    df = pd.read_csv(file_path)
-    
-    # Convert 'timestamp' to datetime and set as index
-    df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
-    df.set_index('timestamp', inplace=True)
-    df.sort_index(inplace=True)
-    
+# Files
+berlin_file = '../../datasets/berlin_era5_wind_20241231_20241231.csv'
+munich_file = '../../datasets/munich_era5_wind_20241231_20241231.csv'
+
+
+# Loading the data
+def load_data(file_path):
+    try:
+        df = pd.read_csv(file_path, parse_dates=["timestamp"])
+        print(f"{file_path} is loaded.")
+        print("\nData info:", df.info())
+        return df
+    except Exception as e:
+        print(f"Error: {e}")
+        return None
+
+#calculate the wind speed
+def calculate_wind_speed(df):
+    df["wind_speed"] = np.sqrt(df["u10m"] ** 2 + df["v10m"] ** 2)
     return df
 
 
-# -------------------------------------------------------------------------
-# 2. PATHS TO DATA FILES
-# -------------------------------------------------------------------------
-# Update these paths or make them command-line arguments as needed.
-BERLIN_FILE = "../../datasets/berlin_era5_wind_20241231_20241231.csv"
-MUNICH_FILE = "../../datasets/munich_era5_wind_20241231_20241231.csv"
+# seasonal and monthly averages.
+def compute_aggregations(df):
+    df["month"] = df["timestamp"].dt.month
+    df["season"] = df["timestamp"].dt.month % 12 // 3 + 1  # 1: Winter, 2: Spring, 3: Summer, 4: Fall
+    monthly_avg = df.groupby("month")["wind_speed"].mean()
+    seasonal_avg = df.groupby("season")["wind_speed"].mean()
+    return monthly_avg, seasonal_avg
 
 
-# -------------------------------------------------------------------------
-# 3. MAIN EXECUTION (if run as script)
-# -------------------------------------------------------------------------
-def main():
-    # Load data
-    df_berlin = load_era5_data(BERLIN_FILE)
-    df_munich = load_era5_data(MUNICH_FILE)
-
-    print("=== Berlin Dataset ===")
-    print(df_berlin.info())
-    print(df_berlin.head())
-
-    print("\n=== Munich Dataset ===")
-    print(df_munich.info())
-    print(df_munich.head())
-
-    # ---------------------------------------------------------------------
-    # CHECK & CLEAN MISSING DATA
-    # ---------------------------------------------------------------------
-    print("\nMissing values (Berlin):")
-    print(df_berlin.isna().sum())
-
-    print("\nMissing values (Munich):")
-    print(df_munich.isna().sum())
-
-    # Drop any rows with NaN
-    df_berlin.dropna(inplace=True)
-    df_munich.dropna(inplace=True)
-
-    # ---------------------------------------------------------------------
-    # WIND SPEED CALCULATION
-    # ---------------------------------------------------------------------
-    def calculate_wind_speed(u: pd.Series, v: pd.Series) -> pd.Series:
-        """
-        Compute wind speed from horizontal wind components u and v.
-        Formula: speed = sqrt(u^2 + v^2)
-        """
-        return np.sqrt(u**2 + v**2)
-
-    # Ensure your CSV has columns named 'u10m' and 'v10m'.
-    df_berlin['wind_speed'] = calculate_wind_speed(df_berlin['u10m'], df_berlin['v10m'])
-    df_munich['wind_speed'] = calculate_wind_speed(df_munich['u10m'], df_munich['v10m'])
-
-    # ---------------------------------------------------------------------
-    # TEMPORAL AGGREGATIONS
-    # ---------------------------------------------------------------------
-    def monthly_average(df: pd.DataFrame, var: str) -> pd.Series:
-        """Group by month of the DatetimeIndex and return the mean of 'var'."""
-        return df.groupby(df.index.month)[var].mean()
-
-    berlin_monthly_wind = monthly_average(df_berlin, 'wind_speed')
-    munich_monthly_wind = monthly_average(df_munich, 'wind_speed')
-
-    def get_season(month: int) -> int:
-        """
-        Return season code for the given month:
-        1 = Winter, 2 = Spring, 3 = Summer, 4 = Autumn
-        """
-        if month in [12, 1, 2]:
-            return 1
-        elif month in [3, 4, 5]:
-            return 2
-        elif month in [6, 7, 8]:
-            return 3
-        else:
-            return 4
-
-    # Assign seasons
-    df_berlin['season'] = df_berlin.index.month.map(get_season)
-    df_munich['season'] = df_munich.index.month.map(get_season)
-
-    berlin_seasonal_wind = df_berlin.groupby('season')['wind_speed'].mean()
-    munich_seasonal_wind = df_munich.groupby('season')['wind_speed'].mean()
-
-    # ---------------------------------------------------------------------
-    # STATISTICAL ANALYSIS
-    # ---------------------------------------------------------------------
-    # Extreme Days
-    df_berlin_daily = df_berlin.resample('D').mean(numeric_only=True)
-    df_munich_daily = df_munich.resample('D').mean(numeric_only=True)
-
-    print("\n=== Top 5 Extreme Wind Speed Days (Berlin) ===")
-    print(df_berlin_daily['wind_speed'].nlargest(5))
-
-    print("\n=== Top 5 Extreme Wind Speed Days (Munich) ===")
-    print(df_munich_daily['wind_speed'].nlargest(5))
-
-    # Diurnal Pattern
-    df_berlin['hour'] = df_berlin.index.hour
-    df_munich['hour'] = df_munich.index.hour
-
-    berlin_hourly_pattern = df_berlin.groupby('hour')['wind_speed'].mean()
-    munich_hourly_pattern = df_munich.groupby('hour')['wind_speed'].mean()
-
-    # ---------------------------------------------------------------------
-    # VISUALIZATIONS
-    # ---------------------------------------------------------------------
-    # Optional improvements to default Matplotlib appearance:
-    plt.rcParams['figure.facecolor'] = 'white'  # White background
-    plt.rcParams['axes.facecolor']   = 'white'
-    plt.rcParams.update({
-        'axes.grid'        : True,   # Show grid lines
-        'grid.alpha'       : 0.3,    # Light grid lines
-        'lines.linewidth'  : 2.0,    # Thicker lines
-        'lines.markersize' : 6,      # Larger markers
-        'font.size'        : 12,     # Increase default font size
-    })
-
-    # 6.1 Monthly Average Wind Speed
-    plt.figure(figsize=(10, 6))
-    plt.plot(berlin_monthly_wind.index, berlin_monthly_wind.values, marker='o', label='Berlin')
-    plt.plot(munich_monthly_wind.index, munich_monthly_wind.values, marker='o', label='Munich')
-    plt.title("Monthly Average Wind Speed (2024)", fontsize=16, pad=10)
-    plt.xlabel("Month", fontsize=14)
-    plt.ylabel("Wind Speed (m/s)", fontsize=14)
-    plt.xticks(range(1, 13))
-    plt.legend(fontsize=12)
+# Visualization
+def plot_wind_speed_trends(berlin_df, munich_df):
+    plt.figure(figsize=(12, 6))
+    sns.lineplot(x=berlin_df["timestamp"], y=berlin_df["wind_speed"], label="Berlin")
+    sns.lineplot(x=munich_df["timestamp"], y=munich_df["wind_speed"], label="Munich")
+    plt.xlabel("Date")
+    plt.ylabel("Wind Speed (m/s)")
+    plt.title("Berlin ve Munich Monthly Wind Speed Trends ")
+    plt.legend()
     plt.show()
 
-    # 6.2 Seasonal Comparison
-    season_labels = {1: 'Winter', 2: 'Spring', 3: 'Summer', 4: 'Autumn'}
 
-    plt.figure(figsize=(8, 5))
-    plt.bar(berlin_seasonal_wind.index - 0.15, berlin_seasonal_wind.values, width=0.3, label='Berlin')
-    plt.bar(munich_seasonal_wind.index + 0.15, munich_seasonal_wind.values, width=0.3, label='Munich')
-    plt.title("Seasonal Average Wind Speed (2024)", fontsize=16, pad=10)
-    plt.xlabel("Season", fontsize=14)
-    plt.ylabel("Wind Speed (m/s)", fontsize=14)
-    plt.xticks([1, 2, 3, 4], [season_labels[s] for s in [1, 2, 3, 4]], fontsize=12)
-    plt.legend(fontsize=12)
-    plt.show()
+#Main Code
+berlin_df = load_data(berlin_file)
+munich_df = load_data(munich_file)
 
-    # 6.3 Diurnal (Hourly) Pattern
-    plt.figure(figsize=(10, 6))
-    plt.plot(berlin_hourly_pattern.index, berlin_hourly_pattern.values, marker='o', label='Berlin')
-    plt.plot(munich_hourly_pattern.index, munich_hourly_pattern.values, marker='o', label='Munich')
-    plt.title("Average Diurnal (Hourly) Wind Speed", fontsize=16, pad=10)
-    plt.xlabel("Hour of the Day", fontsize=14)
-    plt.ylabel("Wind Speed (m/s)", fontsize=14)
-    plt.xticks(range(0, 24))
-    plt.legend(fontsize=12)
-    plt.show()
+if berlin_df is not None and munich_df is not None:
+    berlin_df = calculate_wind_speed(berlin_df)
+    munich_df = calculate_wind_speed(munich_df)
 
-    # ---------------------------------------------------------------------
-    # SKYRIM & GIT NOTES
-    # ---------------------------------------------------------------------
-    print("\nDone! All calculations and plots use the 'timestamp' column as DatetimeIndex.")
+    berlin_monthly, berlin_seasonal = compute_aggregations(berlin_df)
+    munich_monthly, munich_seasonal = compute_aggregations(munich_df)
 
+    print("Berlin Monthly averages:\n", berlin_monthly)
+    print("Berlin Seasonal averages:\n", berlin_seasonal)
+    print("Munich Monthly averages:\n", munich_monthly)
+    print("Munich Seasonal averages:\n", munich_seasonal)
 
-# Standard Python convention to allow running the script directly:
-if __name__ == "__main__":
-    main()
+    plot_wind_speed_trends(berlin_df, munich_df)
