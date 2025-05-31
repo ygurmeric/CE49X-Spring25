@@ -1,138 +1,100 @@
-# Final Project: Life Cycle Analysis (LCA) Tool
+# Life Cycle Analysis (LCA) Tool
 
 ## Project Overview
-In this final project, you will develop a Life Cycle Analysis (LCA) tool that helps analyze and visualize the environmental impacts of products or processes throughout their entire life cycle. This project will integrate Python programming fundamentals, data science concepts, and environmental science principles.
+This LCA tool helps analyze and visualize the environmental impacts of products or processes throughout their entire life cycle. The tool integrates Python programming fundamentals, data science concepts, and environmental science principles to provide comprehensive environmental impact assessment.
 
-## Learning Objectives
-By completing this project, you will:
-- Apply Python programming concepts to solve real-world environmental problems
-- Implement data analysis and visualization techniques
-- Develop a practical tool with real-world applications
-- Practice software engineering principles
-- Gain experience in environmental impact assessment
+## Features
 
-## Project Requirements
-
-### 1. Core Functionality
-Your LCA tool must include:
-
-#### Data Input System
-- A system to input product/process data including:
-  - Material inputs
-  - Energy consumption
-  - Transportation data
-  - Waste generation
-  - End-of-life scenarios
-- Input validation and error handling
+### Data Management
 - Support for multiple data formats (CSV, Excel, JSON)
+- Comprehensive data validation
+- Impact factor database integration
+- Life cycle stage tracking
 
-#### Impact Calculation Engine
-- Implementation of basic LCA calculations:
-  - Carbon footprint
-  - Water usage
-  - Energy consumption
-  - Waste generation
-- Support for different impact categories
-- Unit conversion and normalization
+### Impact Analysis
+- Carbon footprint calculation
+- Energy consumption analysis
+- Water usage assessment
+- Waste generation tracking
+- End-of-life management analysis
 
-#### Data Visualization Dashboard
-- Interactive visualizations using Matplotlib/Seaborn:
-  - Impact category breakdowns
-  - Life cycle stage comparisons
-  - Trend analysis
-  - Comparative analysis between alternatives
-- Exportable reports and charts
+### Visualization
+- Impact breakdown by material and life cycle stage
+- Life cycle impact analysis
+- Product comparison using radar charts
+- End-of-life management visualization
+- Impact category correlation analysis
 
-#### Comparison Tools
-- Side-by-side comparison of different scenarios
-- Baseline vs. alternative analysis
-- Sensitivity analysis
-- What-if scenario modeling
+## Installation
 
-### 2. Technical Requirements
-
-#### Python Programming
-- Proper use of data structures (lists, dictionaries, pandas DataFrames)
-- Implementation of control flow statements
-- Error handling and input validation
-- Modular code organization with functions and classes
-- Documentation and comments
-
-#### Data Science Implementation
-- Data cleaning and preprocessing
-- Statistical analysis
-- Time series analysis where applicable
-- Data visualization
-- Export/import functionality
-
-### 3. Project Structure
-Your project should be organized as follows:
-```
-lca_tool/
-├── README.md
-├── requirements.txt
-├── data/
-│   ├── raw/
-│   └── processed/
-├── src/
-│   ├── __init__.py
-│   ├── data_input.py
-│   ├── calculations.py
-│   ├── visualization.py
-│   └── utils.py
-├── tests/
-│   └── test_*.py
-└── notebooks/
-    └── analysis.ipynb
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd lca-tool
 ```
 
-## Deliverables
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
 
-### 1. Code Implementation
-- Complete Python implementation of the LCA tool
-- All required functionality as specified above
-- Well-documented code with docstrings and comments
-- Unit tests for core functionality
+## Usage
 
-### 2. Documentation
-- README.md with:
-  - Project overview
-  - Installation instructions
-  - Usage examples
-- Inline code documentation
+### Basic Usage
+```python
+from src.data_input import DataInput
+from src.calculations import LCACalculator
+from src.visualization import LCAVisualizer
 
-## Evaluation Criteria
+# Load data
+data_input = DataInput()
+product_data = data_input.read_data('data/raw/sample_data.csv')
+impact_factors = data_input.read_impact_factors('data/raw/impact_factors.json')
 
-### Code Quality (40%)
-- Code organization and structure
-- Documentation and comments
-- Error handling
-- Testing coverage
-- Code efficiency
+# Calculate impacts
+calculator = LCACalculator(impact_factors_path='data/raw/impact_factors.json')
+impacts = calculator.calculate_impacts(product_data)
 
-### Functionality (40%)
-- Implementation of core features
-- User interface and experience
-- Data processing capabilities
-- Visualization quality
-- Error handling
+# Visualize results
+visualizer = LCAVisualizer()
+fig = visualizer.plot_impact_breakdown(impacts, 'carbon_impact', 'material_type')
+```
 
-### Documentation (20%)
-- README quality
-- Code documentation
+### Example Notebook
+Check out the example notebook in `notebooks/lca_analysis_example.ipynb` for a comprehensive demonstration of the tool's capabilities.
 
-## Timeline
-- Week 1: Project setup and basic functionality
-- Week 2: Core implementation
-- Week 3: Testing and documentation
-- Week 4: Final submission
+## Data Structure
 
-## Resources
-- Python Data Science Handbook
-- A Whirlwind Tour of Python
-- LCA methodology guides
-- Environmental impact databases
-- Visualization libraries documentation
+### Product Data (CSV)
+The tool expects product data in CSV format with the following columns:
+- `product_id`: Unique identifier for the product
+- `product_name`: Name of the product
+- `life_cycle_stage`: Stage in the life cycle (Manufacturing, Transportation, End-of-Life)
+- `material_type`: Type of material used
+- `quantity_kg`: Quantity in kilograms
+- `energy_consumption_kwh`: Energy consumption in kilowatt-hours
+- `transport_distance_km`: Transportation distance in kilometers
+- `transport_mode`: Mode of transportation
+- `waste_generated_kg`: Waste generated in kilograms
+- `recycling_rate`: Rate of recycling (0-1)
+- `landfill_rate`: Rate of landfill disposal (0-1)
+- `incineration_rate`: Rate of incineration (0-1)
+- `carbon_footprint_kg_co2e`: Carbon footprint in kg CO2e
+- `water_usage_liters`: Water usage in liters
+
+### Impact Factors (JSON)
+Impact factors are stored in JSON format with the following structure:
+```json
+{
+    "material_name": {
+        "life_cycle_stage": {
+            "carbon_impact": value,
+            "energy_impact": value,
+            "water_impact": value
+        }
+    }
+}
+```
 
 ## Submission
 - **Deadline**: June 13, 2025, 11:59 PM
