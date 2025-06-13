@@ -1,0 +1,10 @@
+Metadata-Version: 2.4
+Name: lca_tool
+Version: 0.1.0
+Summary: Life Cycle Assessment tool
+Author: Yunus Emre
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: matplotlib; extra == "dev"
+Requires-Dist: seaborn; extra == "dev"
+Requires-Dist: pandas; extra == "dev"

@@ -3,10 +3,12 @@ requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "final_project"
+name = "lca_tool"
 version = "0.1.0"
-description = "Life Cycle Analysis (LCA) tool for CE49X project"
-authors = [{name = "YunusEmre"}]
+description = "Life Cycle Assessment tool"
+authors = [{name = "Yunus Emre"}]
+
+[tool.setuptools]
 
 packages = ["src"]
 

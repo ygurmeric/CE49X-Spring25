@@ -1,7 +1,3 @@
-"""
-Tests for the calculations module.
-"""
-
 import pytest
 import pandas as pd
 import json

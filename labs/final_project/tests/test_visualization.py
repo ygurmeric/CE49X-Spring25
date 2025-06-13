@@ -1,10 +1,11 @@
+
+from src.visualization import LCAVisualizer
 import pytest
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use("Agg")
 
-from src.visualization import LCAVisualizer
 
 @pytest.fixture(scope="session", autouse=True)
 def patch_style():
