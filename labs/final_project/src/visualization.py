@@ -1,3 +1,5 @@
+# src/visualization.py
+
 """
 Visualization module for LCA tool.
 Handles creation of plots and charts for impact analysis.
@@ -11,7 +13,14 @@ import numpy as np
 
 class LCAVisualizer:
     def __init__(self):
-        plt.style.use('seaborn')
+        # HATA DÜZELTİLDİ: 'seaborn' stili, matplotlib 3.6+ versiyonlarında
+        # 'seaborn-v0_8-darkgrid' gibi yeni isimlerle değiştirildi.
+        try:
+            plt.style.use('seaborn-v0_8-darkgrid')
+        except OSError:
+            # Çok eski bir matplotlib sürümü için yedek plan
+            plt.style.use('seaborn')
+            
         self.colors = sns.color_palette("husl", 8)
         self.impact_labels = {
             'carbon_impact': 'Carbon Impact (kg CO2e)',
@@ -44,7 +53,7 @@ class LCAVisualizer:
         if title:
             ax.set_title(title)
         else:
-            ax.set_title(f'{self.impact_labels[impact_type]} by {group_by.replace("_", " ").title()}')
+            ax.set_title(f'{self.impact_labels.get(impact_type, impact_type)} by {group_by.replace("_", " ").title()}')
             
         return fig
     
@@ -68,18 +77,24 @@ class LCAVisualizer:
         impact_types = ['carbon_impact', 'energy_impact', 'water_impact', 'waste_generated_kg']
         
         for idx, impact_type in enumerate(impact_types):
-            stage_data = product_data.pivot_table(
-                index='life_cycle_stage',
-                values=impact_type,
-                aggfunc='sum'
-            )
-            
-            stage_data.plot(kind='bar', ax=axes[idx], color=self.colors[idx])
-            axes[idx].set_title(self.impact_labels[impact_type])
-            axes[idx].set_xlabel('Life Cycle Stage')
-            axes[idx].tick_params(axis='x', rotation=45)
+            if impact_type in product_data.columns:
+                stage_data = product_data.pivot_table(
+                    index='life_cycle_stage',
+                    values=impact_type,
+                    aggfunc='sum'
+                )
+                
+                stage_data.plot(kind='bar', ax=axes[idx], color=self.colors[idx], legend=False)
+                axes[idx].set_title(self.impact_labels.get(impact_type, impact_type))
+                axes[idx].set_xlabel('Life Cycle Stage')
+                axes[idx].tick_params(axis='x', rotation=45)
+        
+        # Kullanılmayan eksenleri gizle
+        for i in range(len(impact_types), len(axes)):
+            axes[i].set_visible(False)
             
         plt.tight_layout()
+        fig.suptitle(f'Life Cycle Impacts for Product {product_id}', fontsize=16, y=1.02)
         return fig
     
     def plot_product_comparison(self, data: pd.DataFrame, 
@@ -102,7 +117,7 @@ class LCAVisualizer:
             'waste_generated_kg': 'sum'
         })
         
-        # Normalize the data
+        # Normalize the data for fair comparison on the radar chart
         normalized = total_impacts.copy()
         for col in total_impacts.columns:
             max_val = total_impacts[col].max()
@@ -110,24 +125,25 @@ class LCAVisualizer:
                 normalized[col] = total_impacts[col] / max_val
         
         # Create radar chart
-        categories = list(normalized.columns)
+        categories = [label.split(' (')[0] for label in self.impact_labels.values()] # Use shorter labels
         num_vars = len(categories)
         
-        angles = [n / float(num_vars) * 2 * np.pi for n in range(num_vars)]
-        angles += angles[:1]
+        angles = np.linspace(0, 2 * np.pi, num_vars, endpoint=False).tolist()
+        angles += angles[:1] # Close the circle
         
         fig, ax = plt.subplots(figsize=(10, 10), subplot_kw=dict(projection='polar'))
         
         for idx, product_id in enumerate(product_ids):
-            values = normalized.loc[product_id].values
-            values = np.concatenate((values, [values[0]]))
-            ax.plot(angles, values, linewidth=2, label=product_id)
-            ax.fill(angles, values, alpha=0.1)
+            values = normalized.loc[product_id].values.flatten().tolist()
+            values += values[:1] # Close the circle
+            ax.plot(angles, values, linewidth=2, linestyle='solid', label=data.loc[data['product_id'] == product_id, 'product_name'].iloc[0])
+            ax.fill(angles, values, alpha=0.25)
         
+        ax.set_yticklabels([])
         ax.set_xticks(angles[:-1])
-        ax.set_xticklabels(categories)
-        ax.set_title('Product Comparison Across Impact Categories')
-        plt.legend(loc='upper right', bbox_to_anchor=(0.3, 0.3))
+        ax.set_xticklabels(categories, size=12)
+        ax.set_title('Product Comparison Across Impact Categories', size=16, y=1.1)
+        plt.legend(loc='upper right', bbox_to_anchor=(1.3, 1.1))
         
         return fig
     
@@ -143,19 +159,25 @@ class LCAVisualizer:
         Returns:
             matplotlib Figure object
         """
-        product_data = data[data['product_id'] == product_id]
+        # Sadece End-of-Life aşamasını filtrele
+        eol_data = data[(data['product_id'] == product_id) & (data['life_cycle_stage'].str.lower() == 'end-of-life')]
         
         fig, ax = plt.subplots(figsize=(10, 6))
         
-        eol_data = product_data[['recycling_rate', 'landfill_rate', 'incineration_rate']]
-        eol_data.plot(kind='bar', stacked=True, ax=ax, 
-                     color=['green', 'red', 'orange'])
+        # Eğer veri yoksa boş grafik göster
+        if eol_data.empty:
+            ax.text(0.5, 0.5, f'No End-of-Life data for Product {product_id}', ha='center', va='center')
+            return fig
+
+        product_name = eol_data['product_name'].iloc[0]
+        eol_rates = eol_data[['recycling_rate', 'landfill_rate', 'incineration_rate']].iloc[0] # Sadece ilk satırı al
         
-        ax.set_title(f'End-of-Life Management for Product {product_id}')
-        ax.set_xlabel('Life Cycle Stage')
-        ax.set_ylabel('Rate')
-        ax.set_ylim(0, 1)
-        plt.xticks(rotation=45)
+        eol_rates.plot(kind='pie', autopct='%1.1f%%', ax=ax,
+                       labels=['Recycling', 'Landfill', 'Incineration'],
+                       colors=['green', 'brown', 'orange'])
+        
+        ax.set_title(f'End-of-Life Management for {product_name} ({product_id})')
+        ax.set_ylabel('') # "Rate" etiketini kaldır
         
         return fig
     
@@ -173,8 +195,8 @@ class LCAVisualizer:
         correlation = data[impact_columns].corr()
         
         fig, ax = plt.subplots(figsize=(10, 8))
-        sns.heatmap(correlation, annot=True, cmap='coolwarm', center=0, ax=ax)
+        sns.heatmap(correlation, annot=True, cmap='coolwarm', fmt=".2f", center=0, ax=ax)
         
         ax.set_title('Impact Category Correlations')
         
-        return fig 
+        return fig
