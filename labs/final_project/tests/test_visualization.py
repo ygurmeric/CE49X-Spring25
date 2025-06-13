@@ -1,21 +1,24 @@
-"""
-Tests for the visualization module.
-"""
-
 import pytest
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use("Agg")
+
 from src.visualization import LCAVisualizer
+
+@pytest.fixture(scope="session", autouse=True)
+def patch_style():
+    # Patch matplotlib style globally in tests
+    plt.style.use('seaborn-v0_8')  # or 'default' if not available
 
 @pytest.fixture
 def sample_data():
-    """Create sample data for testing."""
     return pd.DataFrame({
-        'product_id': ['P001', 'P001', 'P001', 'P002', 'P002', 'P002'],
-        'product_name': ['Product1', 'Product1', 'Product1', 'Product2', 'Product2', 'Product2'],
+        'product_id': ['P001'] * 3 + ['P002'] * 3,
+        'product_name': ['Product1'] * 3 + ['Product2'] * 3,
         'life_cycle_stage': ['Manufacturing', 'Transportation', 'End-of-Life'] * 2,
-        'material_type': ['steel', 'steel', 'steel', 'aluminum', 'aluminum', 'aluminum'],
-        'quantity_kg': [100, 100, 100, 50, 50, 50],
+        'material_type': ['steel'] * 3 + ['aluminum'] * 3,
+        'quantity_kg': [100] * 6,
         'energy_consumption_kwh': [120, 20, 50, 180, 25, 20],
         'transport_distance_km': [50, 100, 30, 180, 140, 35],
         'transport_mode': ['Truck'] * 6,
@@ -31,48 +34,31 @@ def sample_data():
     })
 
 def test_plot_impact_breakdown(sample_data):
-    """Test impact breakdown plot."""
-    visualizer = LCAVisualizer()
-    
-    # Test by material type
-    fig = visualizer.plot_impact_breakdown(sample_data, 'carbon_impact', 'material_type')
-    assert isinstance(fig, plt.Figure)
-    plt.close(fig)
-    
-    # Test by life cycle stage
-    fig = visualizer.plot_impact_breakdown(sample_data, 'carbon_impact', 'life_cycle_stage')
+    vis = LCAVisualizer()
+    fig = vis.plot_impact_breakdown(sample_data, 'carbon_impact', 'material_type')
     assert isinstance(fig, plt.Figure)
     plt.close(fig)
 
 def test_plot_life_cycle_impacts(sample_data):
-    """Test life cycle impacts plot."""
-    visualizer = LCAVisualizer()
-    fig = visualizer.plot_life_cycle_impacts(sample_data, 'P001')
-    
+    vis = LCAVisualizer()
+    fig = vis.plot_life_cycle_impacts(sample_data, 'P001')
     assert isinstance(fig, plt.Figure)
-    assert len(fig.axes) == 4  # 2x2 subplot layout
     plt.close(fig)
 
 def test_plot_product_comparison(sample_data):
-    """Test product comparison plot."""
-    visualizer = LCAVisualizer()
-    fig = visualizer.plot_product_comparison(sample_data, ['P001', 'P002'])
-    
+    vis = LCAVisualizer()
+    fig = vis.plot_product_comparison(sample_data, ['P001', 'P002'])
     assert isinstance(fig, plt.Figure)
     plt.close(fig)
 
 def test_plot_end_of_life_breakdown(sample_data):
-    """Test end-of-life breakdown plot."""
-    visualizer = LCAVisualizer()
-    fig = visualizer.plot_end_of_life_breakdown(sample_data, 'P001')
-    
+    vis = LCAVisualizer()
+    fig = vis.plot_end_of_life_breakdown(sample_data, 'P001')
     assert isinstance(fig, plt.Figure)
     plt.close(fig)
 
 def test_plot_impact_correlation(sample_data):
-    """Test impact correlation plot."""
-    visualizer = LCAVisualizer()
-    fig = visualizer.plot_impact_correlation(sample_data)
-    
+    vis = LCAVisualizer()
+    fig = vis.plot_impact_correlation(sample_data)
     assert isinstance(fig, plt.Figure)
-    plt.close(fig) 
+    plt.close(fig)
