@@ -1,8 +1,3 @@
-"""
-Calculations module for LCA tool.
-Handles environmental impact calculations and analysis.
-"""
-
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Union
